@@ -1,0 +1,61 @@
+CC       = gcc
+GTKFLAGS = -DG_DISABLE_DEPRECATED -DGDK_DISABLE_DEPRECATED -DGDK_PIXBUF_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED \
+	   `pkg-config --cflags gtk+-2.0 glib-2.0 gobject-2.0 gdk-2.0 gthread-2.0`
+IOFLAGS  = -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE 
+OPTFLAGS = -pipe -O2 -maccumulate-outgoing-args #-ffast-math -march=nocona -mfpmath=sse,387 -msse3
+DBGFLAGS = -ggdb
+CCFLAGS  = -std=gnu99 -Wall -pedantic $(GTKFLAGS) $(IOFLAGS) $(OPTFLAGS)
+CCLINKS  = `pkg-config --libs gtk+-2.0 gthread-2.0` -lm 
+OBJS     = PlumeGen.o TraceGen.o CFD_VIS.o CFD_VISgl.o LAT_VIS.o
+EXE      = makemap mgen pgen tgen vis #lat
+
+all:	$(EXE)
+
+# --- Maps ---
+makemap:	makemap.c
+		$(CC) $(CCFLAGS) $(CCLINKS) $^ -o $@
+
+mgen:		MapGen.c
+		$(CC) $(CCFLAGS) $(CCLINKS) $^ -o $@
+
+MapUtils.o:	MapUtils.c MapUtils.h
+		$(CC) $(CCFLAGS) $< -c
+
+
+# --- PlumeGen ---
+pgen:		PlumeGen.o MapUtils.o
+		$(CC) $(CCLINKS) $^ -o $@
+
+PlumeGen.o:	PlumeGen.c Common.h Scenario.h
+		$(CC) $(CCFLAGS) $< -c
+
+
+# --- TraceGen ---
+tgen:		TraceGen.o MapUtils.o
+		$(CC) $(CCLINKS) $^ -o $@
+
+TraceGen.o:	TraceGen.c TraceGen.h Common.h Scenario.h
+		$(CC) $(CCFLAGS) $< -c
+
+
+# --- CFD_VIS ---
+vis:		CFD_VIS.o CFD_VISgl.o MapUtils.o
+		$(CC) $(CCLINKS) $^ -o $@
+
+CFD_VIS.o:	CFD_VIS.c CFD_VIS.h CFD_VIS_global.h Common.h
+		$(CC) $(CCFLAGS) $< -c
+
+CFD_VISgl.o:	CFD_VISgl.c CFD_VISgl.h CFD_VIS.h CFD_VIS_global.h Common.h
+		$(CC) $(CCFLAGS) $< -c
+
+
+# --- LAT_VIS ---
+#lat:		LAT_VIS.c LAT_VIS.h Common.h MapUtils.o 
+#		$(CC) $(CCFLAGS) LAT_VIS.c $(CCLINKS) MapUtils.o -o lat
+
+
+# --- Clean & Backup ---
+clean:	
+	cp -u *.c backup/.; cp -u *.h backup/.; cp -u Makefile backup/.; \
+	rm -f *.o $(EXE)
+#mgen pgen tgen vis lat
